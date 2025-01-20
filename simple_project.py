@@ -13,7 +13,7 @@ from copy import deepcopy
 
 x_dim = 3
 y_dim = 3
-iterations = 500
+iterations = 10000
 np.random.seed(6050)
 add_attack = True
 attack_center = 0
@@ -117,11 +117,19 @@ for i in range(num_agents):
     tot_div_arr[i] = tot_div_arr_i
     z_cp_arr[i] = z_cp_arr_i
     z_arr[i] = z_arr_i
-    
+
+# Define Trust Variable
+trust = np.zeros((num_agents, num_agents))
+for i in range(num_agents):
+    for j in range(num_agents):
+        if i == j:
+            trust[i][j] = 0
+
 # Storage Variables
 x_norm_diff_history = [np.zeros(iterations) for i in range(num_agents)]
 trust_history = [np.zeros((num_agents, iterations)) for i in range(num_agents)]
 lam_norm_history = [np.zeros((num_agents, iterations)) for i in range(num_agents)]
+
 
 # ADMM Iterations
 
@@ -150,7 +158,7 @@ for iter in tqdm(range(iterations), desc="Iterations", leave=False):
         for nbr_ind in nbr_list[ind]:
             aij = 1
             if adaptive_penalty and (ind != ind_byz):
-                aij = trust_parameter(tot_div_arr[ind][nbr_ind])
+                aij = trust[ind][nbr_ind] #trust_parameter(tot_div_arr[ind][nbr_ind])
             
             obj_i += x_cp_arr[ind].T @ (lam_arr[ind][nbr_ind] - aij*(this_x_arr[ind] + this_x_arr[nbr_ind]))
             obj_i += aij * cp.power(cp.norm(x_cp_arr[ind]), 2)
@@ -181,16 +189,24 @@ for iter in tqdm(range(iterations), desc="Iterations", leave=False):
     # lam-Update
     for ind in range(num_agents):
         
+        tot_trust_i = 0
+        
         for nbr_ind in nbr_list[ind]:
             aij = 1
             if adaptive_penalty and (ind != ind_byz):
-                aij = trust_parameter(tot_div_arr[ind][nbr_ind]) # lam_arr[ind][nbr_ind]
+                aij = trust[ind][nbr_ind] #trust_parameter(tot_div_arr[ind][nbr_ind]) # lam_arr[ind][nbr_ind]
             trust_history[ind][nbr_ind, iter] = aij
                 
             constr_dev = (x_arr[ind] - x_arr[nbr_ind])
             lam_arr[ind][nbr_ind] += (aij*constr_dev)
             tot_div_arr[ind][nbr_ind] += np.abs(aij*constr_dev)
             
+            new_trust = trust_parameter(tot_div_arr[ind][nbr_ind])
+            trust[ind][nbr_ind] = new_trust
+            tot_trust_i += new_trust
+        
+        # Normalize Trust
+        trust[ind][:] = trust[ind][:] / tot_trust_i
 
 
 # Print ADMM Results
@@ -265,7 +281,7 @@ for ind in range(num_agents):
         if nbr_ind == ind_byz:
             color = "orangered"
         
-        trust_ax.plot(np.arange(iterations), trust_history[ind][nbr_ind, :].flatten(), label=f"({ind}, {nbr_ind})")#, color=color)
+        trust_ax.plot(np.arange(iterations), trust_history[ind][nbr_ind, :].flatten(), label=f"({ind}, {nbr_ind})", color=color)
 
 trust_ax.legend()
 trust_ax.set_xlabel("Iterations")

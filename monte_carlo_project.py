@@ -19,7 +19,7 @@ num_sims = 20
 add_attack = True
 rho = 1
 attack_center = 0
-attack_scale = 0
+attack_scale = 1
 show_byz_plt = False
 
 show_prob1 = False
