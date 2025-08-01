@@ -16,12 +16,12 @@ x_dim = 3
 y_dim = 3
 iterations = 100
 init_guess = 0
-# np.random.seed(6050)
+np.random.seed(6052)
 add_attack = True
 attack_center = 0
-attack_scale = 2
+attack_scale = 1
 adaptive_penalty = True
-trust_parameter_scale = 1
+trust_parameter_scale = 1e1
 rho = 1
 trust_threshold = 0.2
 normalization = False
@@ -33,7 +33,9 @@ show_prob2 = False
 # Honest and Rogue Agents
 num_agents = 10
 num_byz = 3
-ind_byz = np.random.randint(0, num_agents, num_byz)
+# ind_byz = np.random.randint(0, num_agents, num_byz)
+ind_byz = np.random.choice(np.arange(0, num_agents), size=num_byz, replace=False)
+print("Byzantine Agents:", ind_byz)
 
 # Color Array
 colors = ['darkgray', 'deeppink', 'springgreen',
@@ -71,7 +73,7 @@ for i in range(num_agents):
         if this_arc[0] == i:
             nbr_list_i.append(this_arc[1])
     nbr_list[i] = nbr_list_i
-    print("Agent", i, "neighbors:", nbr_list_i)
+    # print("Agent", i, "neighbors:", nbr_list_i)
 
 # Trust Function
 def trust_parameter(param):
@@ -111,7 +113,7 @@ print("\nOptimal x for optimization over all agents: \n\t", x_opt_all.flatten())
 
 ### Centralized: Finding optimal for each local objective function
 
-print("\nOptimal x for obj function i:")
+# print("\nOptimal x for obj function i:")
 local_opt_x = []
 local_opt_x_hon = []
 for i in range(num_agents):
@@ -124,7 +126,7 @@ for i in range(num_agents):
     local_opt_x.append(x_opt_i)
     if i not in ind_byz:
         local_opt_x_hon.append(x_opt_i)
-    print("\t", x_opt_i.flatten())
+    # print("\t", x_opt_i.flatten())
 
 
 
@@ -218,7 +220,8 @@ for iter in tqdm(range(iterations), desc="Iterations", leave=False):
                 aij = trust[ind][nbr_ind] #trust_parameter(tot_div_arr[ind][nbr_ind])
             nbr_x_arr = this_x_arr[nbr_ind]
             if add_attack and (nbr_ind in ind_byz):
-                nbr_x_arr += np.random.uniform(attack_center - attack_scale, attack_center + attack_scale)
+                # nbr_x_arr += np.random.uniform(attack_center - attack_scale, attack_center + attack_scale)
+                nbr_x_arr += attack_center + iter*attack_scale
             # obj_i += x_cp_arr[ind].T @ (lam_arr[ind][nbr_ind] - aij*(this_x_arr[ind] + this_x_arr[nbr_ind]))
             obj_i += x_cp_arr[ind].T @ (lam_arr[ind][nbr_ind] - aij*(this_x_arr[ind] + nbr_x_arr))
             obj_i += aij * cp.power(cp.norm(x_cp_arr[ind]), 2)
@@ -275,11 +278,11 @@ for iter in tqdm(range(iterations), desc="Iterations", leave=False):
 
 
 # Print ADMM Results
-print("\nADMM: local x at each agent")
-for i in range(num_agents):     
-    print(f"\tAgent {i}: {x_arr[i].flatten()}")
+# print("\nADMM: local x at each agent")
+# for i in range(num_agents):     
+    # print(f"\tAgent {i}: {x_arr[i].flatten()}")
 
-print("\nADMM: local norm(lam) for each agent")
+# print("\nADMM: local norm(lam) for each agent")
 for i in range(num_agents):
     norm_lam_i = []
     for j in nbr_list[i]:
@@ -287,9 +290,9 @@ for i in range(num_agents):
             norm_lam_i.append(0)
         else: 
             norm_lam_i.append(float(np.linalg.norm(lam_arr[i][j])))
-    print(f"\tAgent {i}: {norm_lam_i}")
+    # print(f"\tAgent {i}: {norm_lam_i}")
     
-print("\nADMM: local trust param for each agent")
+# print("\nADMM: local trust param for each agent")
 for i in range(num_agents):
     norm_tot_div_i = []
     for j in nbr_list[i]:
@@ -297,7 +300,7 @@ for i in range(num_agents):
             norm_tot_div_i.append(0)
         else: 
             norm_tot_div_i.append(float(trust_parameter(tot_div_arr[i][j])))
-    print(f"\tAgent {i}: {norm_tot_div_i}")
+    # print(f"\tAgent {i}: {norm_tot_div_i}")
 
 
 def in_hull (p_arr, hull_arr):
@@ -318,8 +321,8 @@ for i in range(num_agents):
     print(f"\tAgent {i+1}: {hull_bool_arr[i]}")
 
 
-print("\nCentralized: global honest solution within convex hull")
-print(f"\n\tGlobal Honest Sol.: {in_hull(x_opt_honest, local_opt_x_hon)}")
+# print("\nCentralized: global honest solution within convex hull")
+# print(f"\n\tGlobal Honest Sol.: {in_hull(x_opt_honest, local_opt_x_hon)}")
 
 ###     PLOT: Convergence Results
 plot_conv_bool = True
